@@ -1,0 +1,11 @@
+Check_MegaData_smoothings: plots any column of MegaData file with different smoothings
+
+BinnedCorrelations_plots: plot vorrelations of different neurons with different behavior measures across different bin sizes. It also plots correlations among neurons.
+ 
+Autocorrelations_plots: plots of different neurons and different behaviors autocorrelation. Also plots different fits (exponentional,...) of the autocorrelation functions and the time constants of exponentioal fits
+
+Fourier_plots: Plots fourier spectrum of each neurons. Frequency of the odor pulses is marked with a green line in most plots
+
+LinearRegression_acrossBins_plots_thesis_short: for applying linea regression and plotting the results
+      
+      

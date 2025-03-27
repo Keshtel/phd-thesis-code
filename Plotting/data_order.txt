@@ -1,0 +1,33 @@
+MegaData = h5['data/dataraw']
+MegaData is a 3 dimensional matrix
+first dimension: number of worms
+second dimension: frame indext in confocal microscope recordings
+third dimension: different neurons, neurites or behavioral measures id
+The indices of third dimension and their correspondence to different variables are as follows: 				
+	{'RIA1':0,'RIA2':1,'RIM1':2,'RIM2':3,'RIB1':4,'RIB2':5,'sensory':6,
+         'nrD1':7, 'loop1':8, 'neuron':9,'odor':10,'uppercamera_index':11,'lower_camera_time_stamp':12,'v_center_long':13,
+         'v_center_signed_long':14,'v_center_medium':15,'v_center_signed_medium':16,'v_center_short':17,
+         'v_center_signed_short':18,'v_head_long':19,'v_tail':20,'v_head_short':21,'v_headsigned_medium':22, 'v_headsigned_long':23,
+         'v_head_short':24,'v_head_medium':25,'head curvature':26, 'nrD2':27, 'loop2':28, 'head perpandicular_short':29,
+         'head perpandicular_medium':30,'head perpandicular_long':31, 'tail velocity perpendicular long':32,
+         'tail velocity_medium':33, 'tail velocity_short':34, 'tail curvature':35,'merged neurite':36,
+         'head angle wrt center':37,'head angle wrt necl':38,'nrV1':39,'nrV2':40,'v_com_short':41,'v_com_medium':42,
+         'v_com_long':43,'bad fr in upper camera':44,'midbody_angular_velocity_short':45,'midbody_angular_velocity_medium':46,
+         'midbody_angular_velocity_long':47,'head_Vector_x':49,'head_Vector_y':50,'neck_Vector_x':51,'neck_Vector_y':52,
+         'center_Vector_x':53,'center_Vector_y':54,'center_position_x':55,'center_position_y':56}
+
+since different worms have different number of neuronal recording frames, the length of each worm's recording is saved in the vector L as:
+L= h5['data_sets_info/lowercam_length']
+         
+you can get the correspondence of different variables and indices in the third dimension with from h5 file (similiar to the list above)
+with the following lines of code:
+listval = [v for v in h5['data/dataraw'].attrs.values()]
+listkeys = [v for v in h5['data/dataraw'].attrs.keys()]
+listkeys_ord = listkeys
+Dictionary = {listval[v]:listkeys[v] for v in range(len(listkeys)-1)}
+
+15 and 16 are speed and axial velocity computed with dt=1 second. 13 and 14, 17and18 : speed and velocity with longer and shorter dt respectively.
+medium  is the magnitude of the velocity (speed) and signed_medium  is the axial velocity (Axial velocity is the projection of velocity on the center vector of the worm thus it has a positive or negative sign.). wherever I mention speed in plots or thesis, it means the medium  variable and wherever I mention velocity, it is the axial velocity signed_medium.
+
+      
+      

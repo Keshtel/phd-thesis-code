@@ -1,0 +1,11 @@
+for converting MAsk h5 file to points use the script here
+for annotation first set the total number of neurons to the upper limit of neurons you want to annotate. Then assigne a letter-key to each neuron/number and go through the ground truth frames and press that key when the curser is at the location of the neuron. Font forget to save
+
+To make the code work and not give error with initialization of NN I changed something in main_controller.py file line 93:
+self.NN_pointdat = np.full((self.frame_num,self.n_neurons,3),np.nan)
+
+For running on cluster use the .csh file:
+ #!/bin/tcsh                                                                                                                                           
+
+
+python3 targettrack/src/methods/tracking_methods.py W1_HNE_Nonanone_23March_CroppedandRotated.h5
