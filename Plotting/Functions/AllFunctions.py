@@ -62,9 +62,7 @@ def averaging_crosscorr_diff_stretches(x,y,stretches,threshold=20):
     for (start, end) in stretches:
         leng = end-start
         delta = leng-threshold
-        print("stretches length:" +str(leng))
         if leng > threshold:
-            print('accepted')
             count=count+1
             x_valid = x[start:end]
             y_valid = y[start:end]
@@ -460,7 +458,17 @@ def estimate_y(X,theta,y):
     return yhat,error
 
 
+def fall_below_thresh(time,acf_centered,threshold = 1 / np.e):
 
+
+    # Find the first index where acf falls below 1/e
+    below = np.where(acf_centered < threshold)[0]
+
+    if len(below) > 0:
+        lag_index = time[below[0]]
+    else:
+        lag_index = np.nan
+    return lag_index
 
 def find_stretches(valid_indices):
     stretches = []
@@ -630,8 +638,7 @@ def ordinary_least_squares(X, y):
 
 def plot1d_withAnnotations_scatter(timevec,Valvec,All_ind,h=200,plotFB=False,yloc=0,draw_lines=False,
                                    multi=False,multivec=[0],multivec_pos=[1,1,1,1,1,1,1],timevec_orig=[0]):
-    #All_ind:list of labels
-    style.use('fivethirtyeight')
+
     fig = plt.figure(figsize=(10,3))
     ax = fig.add_subplot(111)
     ax.scatter(timevec,Valvec)
@@ -666,8 +673,7 @@ def plot1d_withAnnotations_scatter(timevec,Valvec,All_ind,h=200,plotFB=False,ylo
 
 def plotBar_withAnnotations(timevec,Valvec,widthVec,All_ind,h=0.5,plotFB=False,yloc=0,draw_lines=False,
                                    timevec_orig=[0],allindex=0):
-    #All_ind:list of labels
-    style.use('fivethirtyeight')
+
     fig = plt.figure(figsize=(10,3))
     ax = fig.add_subplot(111)
     ax.bar(timevec,Valvec, width=widthVec, align='center')
@@ -1404,11 +1410,11 @@ def nan_correlate2(x, y, mode='full'):
 
     # Determine the range of lags based on the mode
     if mode == 'full':
-        lags = np.arange(-(m - 1), n)
+        lags = np.arange(-(m - 1), n, dtype=float)
     elif mode == 'valid':
-        lags = np.arange(0, n - m + 1)
+        lags = np.arange(0, n - m + 1, dtype=float)
     elif mode == 'same':
-        lags = np.arange(-(m // 2), n - m // 2)
+        lags = np.arange(-(m // 2), n - m // 2, dtype=float)
     else:
         raise ValueError("mode must be 'full', 'valid', or 'same'.")
 
@@ -1416,7 +1422,8 @@ def nan_correlate2(x, y, mode='full'):
     result = []
 
     # Compute correlation for each lag
-    for lag in lags:
+    for lag0 in lags:
+        lag=int(lag0)
         if lag < 0:
             x_shifted = x[-lag:]  # Align x for negative lag
             y_shifted = y[:len(x_shifted)]

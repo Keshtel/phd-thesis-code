@@ -350,6 +350,7 @@ def plot1d_withOdor(timevec,Valvec,Odorvec,title):
     ax.set_title(title)
     plt.grid()
     plt.show()
+    return fig
 
 def plot1d(timevec,Valvec,title='plot'):
 
@@ -359,6 +360,7 @@ def plot1d(timevec,Valvec,title='plot'):
     ax.set_title(title)
     plt.grid()
     plt.show()
+    return fig
 
 
 def plot_allworms_box(neurons,MegaData, L,vel3first=13,Zscore= True):

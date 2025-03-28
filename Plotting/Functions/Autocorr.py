@@ -10,6 +10,27 @@ from scipy.optimize import curve_fit
 import math
 from scipy.signal import find_peaks
 import seaborn as sns
+
+def autocorrelation_s(x0):
+    x = copy.deepcopy(x0)
+    nonz = np.nonzero(x0)
+    x[nonz[0]] = (x0[nonz[0]] - np.mean(x0[nonz[0]]))/np.std(x0[nonz[0]])
+    raw_autocorr = np.correlate(x, x, mode='full')  # Standard autocorrelation
+
+    valid_mask = x0 != 0  # Mask where data is valid (nonzero)
+    norm_factor = np.correlate(valid_mask.astype(int), valid_mask.astype(int), mode='full')  # Count of nonzero contributions per lag
+    print(len(raw_autocorr))
+    print(len(norm_factor))
+    print(np.unique(valid_mask.astype(int)))
+    norm_autocorr = np.divide(raw_autocorr, norm_factor, where=norm_factor != 0)  # Normalize where valid
+    # norm_autocorr = raw_autocorr # Left to check whether this correction makes any difference
+
+    #norm_autocorr = norm_autocorr[norm_autocorr.size // 2:]  # Take only non-negative lags
+    #norm_autocorr /= norm_autocorr[norm_autocorr.size // 2]  # Normalize by lag-0 autocorrelation
+
+    return norm_autocorr,norm_factor
+
+
 def averaging_crosscorr_diff_stretches(x,y,stretches,threshold=20):
     count = 0
     collected_matrices = []
@@ -17,9 +38,7 @@ def averaging_crosscorr_diff_stretches(x,y,stretches,threshold=20):
     for (start, end) in stretches:
         leng = end-start
         delta = leng-threshold
-        print("stretches length:" +str(leng))
         if leng > threshold:
-            print('accepted')
             count=count+1
             x_valid = x[start:end]
             y_valid = y[start:end]
@@ -43,6 +62,18 @@ def exponential_decay(tau, A, tau_0):
 
 def exponential1_decay(tau, tau_0):
     return np.exp(-tau / tau_0)
+
+def fall_below_thresh(time,acf_centered,threshold = 1 / np.e):
+
+
+    # Find the first index where acf falls below 1/e
+    below = np.where(acf_centered < threshold)[0]
+
+    if len(below) > 0:
+        lag_index = time[below[0]]
+    else:
+        lag_index = np.nan
+    return lag_index
 
 def double_exponential_decay(tau, A1, tau1, A2, tau2):
     return A1 * np.exp(-tau / tau1) + A2 * np.exp(-tau / tau2)
@@ -69,6 +100,7 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
     stretched_exponential = np.zeros((numW,num_neu,3))#
     power_law = np.zeros((numW,num_neu,3))#
     gaussian = np.zeros((numW,num_neu,2))#
+    threshold_t = np.zeros((numW,num_neu))
 
     for d in range(numW):
         for n in range(num_neu):
@@ -77,7 +109,7 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
                 x[x==0]= np.nan
                 autocorrnan2,lagsnan2 = nan_correlate2(x,x)#correlate(x, x, mode='full', method='auto')
                 # Center the result
-                lags = np.arange(-len(x) + 1, len(x))
+                lags = np.zeros(2*len(x)-1)
                 FullAutocorr[d,:len(lags),n] = autocorrnan2
                 lags[:len(x)] = -TimeMat[d,:L[d]][::-1]#-MegaData[d,:L[d],12][::-1]
                 lags[len(x):] = TimeMat[d,1:L[d]]#MegaData[d,1:L[d],12]
@@ -91,11 +123,13 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
 
                 # Fit the exponential model to the autocorrelation
 
-                exp1_decay[d,n], pcov = curve_fit(exponential1_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=1)  # Initial guess for A and tau_0
+                exp1_decay[d,n], pcov = curve_fit(exponential1_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=20)  # Initial guess for A and tau_0
 
 
-                popt2, pcov = curve_fit(exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 1])  # Initial guess for A and tau_0
+                popt2, pcov = curve_fit(exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 20])  # Initial guess for A and tau_0
                 Time_constant[d,n,1], Time_constant[d,n,0] = popt2
+
+                threshold_t[d,n] = fall_below_thresh(time[valid], autocorrnan2[len(x)-1+valid],threshold = 1 / np.e)
 
                 popt_gauss, pcov5 = curve_fit(gaussian_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 1])
                 gaussian[d,n,1], gaussian[d,n,0] = popt_gauss
@@ -104,7 +138,8 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
                 #double_exponential[d,n,2],double_exponential[d,n,0],double_exponential[d,n,3],double_exponential[d,n,1]= popt_double
 
                 if allfit:
-                    popt_stretch, pcov3 = curve_fit(stretched_exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 1, 1])
+                    popt_stretch, pcov3 = curve_fit(stretched_exponential_decay, time[valid],
+                                    autocorrnan2[len(x)-1+valid], p0=[1, 20, 1],maxfev=5000)
                     stretched_exponential[d,n,2],stretched_exponential[d,n,0],stretched_exponential[d,n,1]= popt_stretch
 
                     popt_power, pcov4 = curve_fit(power_law_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1,1, 1],
@@ -114,9 +149,9 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
 
 
     if allfit:
-        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,stretched_exponential,power_law
+        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,stretched_exponential,power_law,threshold_t
     else:
-        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian
+        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,threshold_t
 
 def get_all_cross(MegaData,m,L,TimeMat,thresh=1500,neurite=False):
     'm: the neuron whose cross correlation you want to compute with others'
@@ -142,8 +177,9 @@ def get_all_cross(MegaData,m,L,TimeMat,thresh=1500,neurite=False):
                 x= copy.deepcopy(MegaData[d,:L[d],n])
                 x[x==0]= np.nan
                 autocorrnan2,lagsnan2 = nan_correlate2(x,y)#correlate(x, x, mode='full', method='auto')
+
                 # Center the result
-                lags = np.arange(-len(x) + 1, len(x))
+                lags = np.zeros(2*len(x)-1)
                 FullAutocorr[d,:len(lags),n] = autocorrnan2
                 lags[:len(x)] = -TimeMat[d,:L[d]][::-1]#-MegaData[d,:L[d],12][::-1]
                 lags[len(x):] = TimeMat[d,1:L[d]]#MegaData[d,1:L[d],12]
@@ -188,11 +224,11 @@ def nan_correlate2(x, y, mode='full'):
 
     # Determine the range of lags based on the mode
     if mode == 'full':
-        lags = np.arange(-(m - 1), n)
+        lags = np.arange(-(m - 1), n, dtype=float)
     elif mode == 'valid':
-        lags = np.arange(0, n - m + 1)
+        lags = np.arange(0, n - m + 1, dtype=float)
     elif mode == 'same':
-        lags = np.arange(-(m // 2), n - m // 2)
+        lags = np.arange(-(m // 2), n - m // 2, dtype=float)
     else:
         raise ValueError("mode must be 'full', 'valid', or 'same'.")
 
@@ -200,7 +236,9 @@ def nan_correlate2(x, y, mode='full'):
     result = []
 
     # Compute correlation for each lag
-    for lag in lags:
+    for lag0 in lags:
+        print(lag0)
+        lag = int(lag0)
         if lag < 0:
             x_shifted = x[-lag:]  # Align x for negative lag
             y_shifted = y[:len(x_shifted)]
@@ -215,7 +253,8 @@ def nan_correlate2(x, y, mode='full'):
         valid_mask = ~np.isnan(x_shifted) & ~np.isnan(y_shifted)
         x_valid = x_shifted[valid_mask]
         y_valid = y_shifted[valid_mask]
-
+        print(len(y_valid))
+        print(np.sum(valid_mask))
         # Compute the dot product if there are valid elements
         if len(x_valid) > 0 and len(y_valid) > 0:
             result.append(np.dot(x_valid, y_valid)/len(y_valid))
@@ -239,7 +278,7 @@ def norm_cross_corr_nan(signal1,signal2,mod='full'):
     signal2n = (signal2-np.nanmean(signal2))/np.nanstd(signal2)
     valid_mask = ~np.isnan(signal1n) & ~np.isnan(signal2n)
     norm_cross_corr = np.correlate(signal1n[valid_mask], signal2n[valid_mask], mode=mod)/len(signal1n[valid_mask])
-    return norm_cross_corr
+    return norm_cross_corr,valid_mask
 
 
 def plot_autocorr(lags, autocorr,hl=1/np.e,titre="Autocorrelation of the Signal",ylab="Autocorrelation",xlab="Lag"):
@@ -313,7 +352,7 @@ def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0):
         paramName: Label for the y-axis.
         fs: Font size for labels and ticks.
     """
-    row_means = np.nanmean(data, axis=0)  # Mean across rows, ignoring NaNs
+    row_means = np.nanmedian(data, axis=0)  # Mean across rows, ignoring NaNs
     row_sems = np.nanstd(data, axis=0) / np.sqrt(np.sum(~np.isnan(data), axis=0))  # SEM calculation
     rows = np.arange(data.shape[1])  # Row indices for the x-axis
 
@@ -411,5 +450,5 @@ def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0):
     # Set shared labels
     fig.text(0.5, 0.04, 'Lag', ha='center', fontsize=20)
     fig.text(0.04, 0.5, 'Autocorrelation', va='center', rotation='vertical', fontsize=20)
-    
+
     return fig
