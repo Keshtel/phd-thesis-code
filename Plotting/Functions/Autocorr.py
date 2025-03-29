@@ -19,9 +19,6 @@ def autocorrelation_s(x0):
 
     valid_mask = x0 != 0  # Mask where data is valid (nonzero)
     norm_factor = np.correlate(valid_mask.astype(int), valid_mask.astype(int), mode='full')  # Count of nonzero contributions per lag
-    print(len(raw_autocorr))
-    print(len(norm_factor))
-    print(np.unique(valid_mask.astype(int)))
     norm_autocorr = np.divide(raw_autocorr, norm_factor, where=norm_factor != 0)  # Normalize where valid
     # norm_autocorr = raw_autocorr # Left to check whether this correction makes any difference
 
@@ -50,11 +47,34 @@ def averaging_crosscorr_diff_stretches(x,y,stretches,threshold=20):
     # Convert the list of matrices to a numpy array
     total_matrix = np.vstack(collected_matrices)
     total_weight = np.vstack(collected_weights)
-    if True:#total_matrix.shape[0] == count*threshold*2:
-        final_matrix = total_matrix.reshape(count, threshold*2)
-        print("Final matrix shape:", final_matrix.shape)
-    else:
-        print("Error: The total number of rows is not correct")
+
+    final_matrix = total_matrix.reshape(count, threshold*2)
+    print("Final matrix shape:", final_matrix.shape)
+    return final_matrix,total_weight
+
+def averaging_crosscorr_diff_stretches_nan(x,y,stretches,threshold=20):
+    count = 0
+    collected_matrices = []
+    collected_weights = []
+    for (start, end) in stretches:
+        leng = end-start
+        delta = leng-threshold
+        if leng > threshold:
+            count=count+1
+            x_valid = x[start:end]
+            y_valid = y[start:end]
+            cross_correlation, = nan_correlate2(x_valid, y_valid)
+            st_ind = delta
+            end_ind = delta+2*threshold
+            collected_matrices.append(cross_correlation[st_ind:end_ind])
+            collected_weights.append(leng)
+    # Convert the list of matrices to a numpy array
+    total_matrix = np.vstack(collected_matrices)
+    total_weight = np.vstack(collected_weights)
+
+    final_matrix = total_matrix.reshape(count, threshold*2)
+    print("Final matrix shape:", final_matrix.shape)
+
     return final_matrix,total_weight
 
 def exponential_decay(tau, A, tau_0):
@@ -111,8 +131,8 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
                 # Center the result
                 lags = np.zeros(2*len(x)-1)
                 FullAutocorr[d,:len(lags),n] = autocorrnan2
-                lags[:len(x)] = -TimeMat[d,:L[d]][::-1]#-MegaData[d,:L[d],12][::-1]
-                lags[len(x):] = TimeMat[d,1:L[d]]#MegaData[d,1:L[d],12]
+                lags[:len(x)] = -TimeMat[d,:L[d]][::-1] + TimeMat[d,0]
+                lags[len(x):] = TimeMat[d,1:L[d]] - TimeMat[d,0]
                 FullLags[d,:len(lags),n] = lags
                 time = lags[len(x)-1:]
                 valid= np.nonzero(~np.isnan(autocorrnan2[len(x)-1:]))[0]
@@ -131,7 +151,7 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
 
                 threshold_t[d,n] = fall_below_thresh(time[valid], autocorrnan2[len(x)-1+valid],threshold = 1 / np.e)
 
-                popt_gauss, pcov5 = curve_fit(gaussian_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 1])
+                popt_gauss, pcov5 = curve_fit(gaussian_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 20])
                 gaussian[d,n,1], gaussian[d,n,0] = popt_gauss
 
                 #popt_double, pcov2 = curve_fit(double_exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 1, 1, 1])
@@ -181,8 +201,8 @@ def get_all_cross(MegaData,m,L,TimeMat,thresh=1500,neurite=False):
                 # Center the result
                 lags = np.zeros(2*len(x)-1)
                 FullAutocorr[d,:len(lags),n] = autocorrnan2
-                lags[:len(x)] = -TimeMat[d,:L[d]][::-1]#-MegaData[d,:L[d],12][::-1]
-                lags[len(x):] = TimeMat[d,1:L[d]]#MegaData[d,1:L[d],12]
+                lags[:len(x)] = -TimeMat[d,:L[d]][::-1] + TimeMat[d,0]
+                lags[len(x):] = TimeMat[d,1:L[d]] - TimeMat[d,0]
                 FullLags[d,:len(lags),n] = lags
                 time = lags[len(x)-1:]
                 valid= np.nonzero(~np.isnan(autocorrnan2[len(x)-1:]))[0]
@@ -261,10 +281,19 @@ def nan_correlate2(x, y, mode='full'):
     return np.array(result), lags
 
 
-def norm_cross_corr(signal1,signal2,mod='full'):
+def norm_cross_corr(signal1,signal2,mod='full',zeros = 0):
     # this definition is good if you dont have any  nan values
-    signal1n = (signal1-np.mean(signal1))/np.std(signal1)
-    signal2n = (signal2-np.mean(signal2))/np.std(signal2)
+    # zeros: whether to consider contribution of zero values in the correlation
+    if zeros:
+        signal1n = copy.deepcopy(signal1)
+        nonz1 = np.nonzero(signal1)[0]
+        signal1n[nonz1] = (signal1[nonz1]-np.mean(signal1[nonz1]))/np.std(signal1[nonz1])
+        signal2n = copy.deepcopy(signal2)
+        nonz2 = np.nonzero(signal2)[0]
+        signal2n[nonz2] = (signal2[nonz2]-np.mean(signal2[nonz2]))/np.std(signal2[nonz2])
+    else:
+        signal1n = (signal1-np.mean(signal1))/np.std(signal1)
+        signal2n = (signal2-np.mean(signal2))/np.std(signal2)
     norm_cross_corr = np.correlate(signal1n, signal2n, mode=mod)/len(signal1n)
     return norm_cross_corr
 
@@ -279,7 +308,7 @@ def norm_cross_corr_nan(signal1,signal2,mod='full'):
 
 
 def plot_autocorr(lags, autocorr,hl=1/np.e,titre="Autocorrelation of the Signal",ylab="Autocorrelation",xlab="Lag"):
-    plt.figure(figsize=(10,4))
+    fig =plt.figure(figsize=(10,4))
     plt.stem(lags, autocorr, use_line_collection=True)
     plt.title(titre)
     plt.xlabel(xlab)
@@ -405,7 +434,7 @@ def plot_parameters_violin(data, Neur_lab, paramName='τ Value', fs=16,r=0):
     return fig
 
 
-def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0):
+def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0,limit=1000):
     #exp: 0 if  A*exp(t/t0) is fitted and 1 if exp(t/t0) is fitted
     numW = FullLags.shape[0]
     num_n = FullLags.shape[2]
@@ -417,9 +446,11 @@ def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0):
             ax = axes[d, n]  # Access the subplot
 
             # Extract data for current n and d
-            temp = FullLags[d, L[d]:2*L[d]-1, n]
-            autocorr = FullAutocorr[d, L[d]:2*L[d]-1, n]
+            temp = FullLags[d, L[d]-1:2*L[d]-1, n]
+            autocorr = FullAutocorr[d, L[d]-1:2*L[d]-1, n]
             ax.scatter(temp, autocorr, label="Data", color="blue", alpha=0.6)
+            hl=1/np.e
+            ax.axhline(y= hl, color='green', linestyle='--')
             if exp==0:
                 popt2 = Time_constant[d, n, 1], Time_constant[d, n, 0]
                 ax.plot(temp, exponential_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
@@ -432,8 +463,50 @@ def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0):
             # Add titles and grid
             ax.set_title(Neur_lab[n]+f", W={d}", fontsize=15)
             ax.grid(alpha=0.5)
-            ax.set_ylim(-1, 1)
-            ax.set_xlim(right= 1000)
+            ax.set_ylim(-0.2, 1.1)
+            ax.set_xlim(-0.2,limit)
+
+            ax.text(0.3, 0.7, f"τ={tau_value:.2f}", transform=ax.transAxes, fontsize=10, color="black")
+            # Remove ticks for better readability
+            ax.tick_params(axis='both', which='major', labelsize=15)
+
+    # Set shared labels
+    fig.text(0.5, 0.04, 'Lag', ha='center', fontsize=20)
+    fig.text(0.04, 0.5, 'Autocorrelation', va='center', rotation='vertical', fontsize=20)
+
+    return fig
+
+def plot_AllneuronsFit_thresh(FullLags,FullAutocorr,Neur_lab,Time_constant,thresh,L,exp=0,limit=1000):
+    #exp: 0 if  A*exp(t/t0) is fitted and 1 if exp(t/t0) is fitted
+    numW = FullLags.shape[0]
+    num_n = FullLags.shape[2]
+    fig, axes = plt.subplots(numW, num_n, figsize=(20, 10), sharex=True, sharey=True)
+    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    # Loop over all combinations of n and d
+    for n in range(num_n):
+        for d in range(numW):
+            ax = axes[d, n]  # Access the subplot
+
+            # Extract data for current n and d
+            temp = FullLags[d, L[d]-1:2*L[d]-1, n]
+            autocorr = FullAutocorr[d, L[d]-1:2*L[d]-1, n]
+            ax.scatter(temp, autocorr, label="Data", color="blue", alpha=0.6)
+            hl=1/np.e
+            ax.axhline(y= hl, color='green', linestyle='--')
+            if exp==0:
+                popt2 = Time_constant[d, n, 1], Time_constant[d, n, 0]
+                ax.plot(temp, exponential_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
+                tau_value = thresh[d, n, 0]
+            if exp==1:
+                popt2 = Time_constant[d, n],
+                ax.plot(temp, exponential1_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
+                tau_value = thresh[d, n]
+
+            # Add titles and grid
+            ax.set_title(Neur_lab[n]+f", W={d}", fontsize=15)
+            ax.grid(alpha=0.5)
+            ax.set_ylim(-0.2, 1.1)
+            ax.set_xlim(-0.2,limit)
 
             ax.text(0.3, 0.7, f"τ={tau_value:.2f}", transform=ax.transAxes, fontsize=10, color="black")
             # Remove ticks for better readability
