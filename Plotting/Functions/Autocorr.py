@@ -237,7 +237,6 @@ def nan_correlate2(x, y, mode='full'):
 
     # Compute correlation for each lag
     for lag0 in lags:
-        print(lag0)
         lag = int(lag0)
         if lag < 0:
             x_shifted = x[-lag:]  # Align x for negative lag
@@ -253,8 +252,6 @@ def nan_correlate2(x, y, mode='full'):
         valid_mask = ~np.isnan(x_shifted) & ~np.isnan(y_shifted)
         x_valid = x_shifted[valid_mask]
         y_valid = y_shifted[valid_mask]
-        print(len(y_valid))
-        print(np.sum(valid_mask))
         # Compute the dot product if there are valid elements
         if len(x_valid) > 0 and len(y_valid) > 0:
             result.append(np.dot(x_valid, y_valid)/len(y_valid))
@@ -314,11 +311,7 @@ def plot_parameters_errbar(data,Neur_lab, paramName='τ Value',fs = 16):
     plt.errorbar(rows, row_means, yerr=row_sems, fmt='o-', capsize=5, label='Mean ± SEM',lw=4)
     plt.xticks(rows,labels=Neur_lab,fontsize=fs)  # Set custom x labels with font size
     plt.yticks(fontsize=fs)
-    # Customize the plot
-    #plt.xlabel("Row Index", fontsize=fs)
     plt.title(paramName, fontsize=fs)
-    #plt.title("Mean Values with Error Bars", fontsize=fs)
-    #plt.legend()
     plt.grid(True)
 
 def plot_parameters_errbar2(data1,data2,Neur_lab, paramName='τ Value',fs = 16):
@@ -334,15 +327,11 @@ def plot_parameters_errbar2(data1,data2,Neur_lab, paramName='τ Value',fs = 16):
     plt.errorbar(rows2, row_means2, yerr=row_sems2, fmt='o', capsize=10, label='dn',lw=4)
     plt.xticks(rows1,labels=Neur_lab,fontsize=fs)  # Set custom x labels with font size
     plt.yticks(fontsize=fs)
-    # Customize the plot
-    #plt.xlabel("Row Index", fontsize=fs)
-    #plt.ylabel(paramName, fontsize=fs)
     plt.title(paramName, fontsize=fs)
-    #plt.legend()
     plt.grid(True)
     return fig
 
-def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0):
+def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0,median=0):
     """
     Plot bar plots with error bars for the given data.
 
@@ -352,7 +341,10 @@ def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0):
         paramName: Label for the y-axis.
         fs: Font size for labels and ticks.
     """
-    row_means = np.nanmedian(data, axis=0)  # Mean across rows, ignoring NaNs
+    if median:
+        row_means = np.nanmedian(data, axis=0)  # Median across rows, ignoring NaNs
+    else:
+        row_means = np.nanmean(data, axis=0)  # Mean across rows, ignoring NaNs
     row_sems = np.nanstd(data, axis=0) / np.sqrt(np.sum(~np.isnan(data), axis=0))  # SEM calculation
     rows = np.arange(data.shape[1])  # Row indices for the x-axis
 
