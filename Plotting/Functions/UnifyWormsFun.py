@@ -393,5 +393,5 @@ def smooth_vec(rowsArr_floatloc0,sig=1,inter=0):
     for t in range(len(starts)):
         if end[t]-starts[t]>3:
             smoothed_arr[starts[t]:end[t]] = gaussian_filter1d((rowsArr_floatloc1[starts[t]:end[t]]), sigma=sig)
-        smoothed_arr_f = [np.float(x) for x in smoothed_arr]
+        smoothed_arr_f = [float(x) for x in smoothed_arr]
     return smoothed_arr_f
