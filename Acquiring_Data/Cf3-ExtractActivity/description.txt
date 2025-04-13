@@ -1,0 +1,10 @@
+For 3D-volumetric recordings the following scripts are used for extracting calcium activity from the maskes in a h5 file.
+PlotActivityWMean.py : The main script used for obtaining activity
+PlotActivityWMean1ztack.py : Use if you want to only consider 1 z tack for computing activity instead of the whole volume
+PlotActivityWMeanNeighbor.py : Use if you want to compute all the calcium activity in a cylinder or sphere around a certain neuron
+PlotActivityWMeanNeighbor_efficient.py
+
+You can run the scripts in terminal:
+python3 PlotActivityWMean.py Adddress_of_2channel_file_with_mask/movieName.h5 Adddress_of_outputfile/activityName.h5
+
+For 2D Z-projection of movies, calculate activity of Z-projection of movies, saved in avi,  with binary masks saved as .png (masks acquired from SAM or another method) use MapMasks2AVI.ipynb notebook. You can use plotActivity_avi.ipynb for plotting the activities calculated in MapMasks2AVI.ipynb.

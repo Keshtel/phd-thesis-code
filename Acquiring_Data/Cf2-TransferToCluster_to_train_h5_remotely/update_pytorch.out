@@ -1,0 +1,11 @@
+PyTorch version: 1.13.1+cu117, CUDA version: 11.7
+Looking in indexes: https://download.pytorch.org/whl/cu118
+Requirement already satisfied: torch in /home/barzegar/venvGui/lib/python3.7/site-packages (1.13.1)
+Could not fetch URL https://download.pytorch.org/whl/cu118/torch/: There was a problem confirming the ssl certificate: HTTPSConnectionPool(host='download.pytorch.org', port=443): Max retries exceeded with url: /whl/cu118/torch/ (Caused by SSLError("Can't connect to HTTPS URL because the SSL module is not available.")) - skipping
+Requirement already satisfied: torchvision in /home/barzegar/.local/lib/python3.7/site-packages (0.8.2)
+Could not fetch URL https://download.pytorch.org/whl/cu118/torchvision/: There was a problem confirming the ssl certificate: HTTPSConnectionPool(host='download.pytorch.org', port=443): Max retries exceeded with url: /whl/cu118/torchvision/ (Caused by SSLError("Can't connect to HTTPS URL because the SSL module is not available.")) - skipping
+Could not fetch URL https://download.pytorch.org/whl/cu118/torchaudio/: There was a problem confirming the ssl certificate: HTTPSConnectionPool(host='download.pytorch.org', port=443): Max retries exceeded with url: /whl/cu118/torchaudio/ (Caused by SSLError("Can't connect to HTTPS URL because the SSL module is not available.")) - skipping
+Could not fetch URL https://download.pytorch.org/whl/cu118/pip/: There was a problem confirming the ssl certificate: HTTPSConnectionPool(host='download.pytorch.org', port=443): Max retries exceeded with url: /whl/cu118/pip/ (Caused by SSLError("Can't connect to HTTPS URL because the SSL module is not available.")) - skipping
+Updated PyTorch version: 1.13.1+cu117, CUDA version: 11.7
+True
+NVIDIA H100
