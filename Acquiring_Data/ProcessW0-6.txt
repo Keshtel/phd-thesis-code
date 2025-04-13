@@ -1,0 +1,69 @@
+Brain recording: 
+
+First convert nd2 files to h5 file using scripts in Cf0-TreatND2.
+Open the h5  file in GUI and perform the coarse segmentation on all frames. After finishing the coarse segmentation choose one frame as reference and align all the frames with respect to that(these steps are explained in targettrack paper).
+When the alignment is finished crop the reference frame. Then go to Import/Export tab in GUI and 
+Export cropped and rotated. This saves the file in both channels after cropping which have a smaller size and is easier to work with.
+
+Then open the cropped and rotated file and export again the red channel. This (*) will even have smaller size and be easier to work with. You can start annotating a few frames in this file and train the NN on them to get the predictions. 
+After approving the prediction masks you can start correcting the masks manually in annotation tab.
+
+Option: sometimes point tracking and manually correcting is easier especially neurons with nucleic expressions. You can use scripts in Cf1-PointData script in order to convert masks into point and vice versa.
+
+Training: After annotations use the  scripts in Cf2-TransferToCluster_to_train_h5_remotely to train NN on cluster. So far targettrack's targeted augmentation step for mask doesn't work on the new cluster because it uses JianVermuri which is not optimized for new dumpy and python versions. I may change that to normal rotation if I have time.
+
+ssh barzegar@kuma.hpc.epfl.ch
+
+sbatch runArrayPts.sbatch Movie.h5
+sbatch runArraySingle.sbatch 53 1 SJR16Sep20
+
+squeue -u barzegar
+
+scp -r barzegar@kuma.hpc.epfl.ch:/scratch/barzegar/neural_network_scripts_2024/movie.h5 Local/Directory/onYour/System/
+
+
+Rotations after training: sometimes the original rotation based on coarse segmentation is not very good. In those cases you can use the custom script in Cf1-roatationScripts/ to rotate every frame based on 2 neurons that are well tracked by first round of NN training.
+
+
+After you did all the training and manual annotations possible you can map the masks from the smaller red channel movie (*) into the 2 channel cropped h5 file or the original h5 file. Then you can use the 2 channel h5 file to extract the calcium activity using scripts in Cf3-ExtractActivity/. There are explanations inside the .py file in that folder. 
+The results of these scripts go into /Data/All_Data/All_activity1/ folder.
+
+
+Behavioral recording:
+
+Previously we used DeepLabCut for coarse annotations of the worm's location and then manually corrected it. But for recent worms SAM or Mediar had been used. 
+
+Cropping: The field of view of low-magnification behavioral camera is usually much larger than the microfluidic chip so first crop the movie to as small window as possible using B0_PreProcess_forSAM/0-Cropavi.ipynb
+
+Partitioning: for worm's segmentations in behavioral recordings, first divide the .avi file into enough partitions such that each file has 30-50MB size before feeding it into SAM. For that use the B0_PreProcess_forSAM/1-PreProcess_files.ipynb script.
+
+Tracking behavior: For tracking with SAM I used the version  of  SAM in LPBS2/Misc/Mahsa-Barzegar/Revisions/ExtraData/SAMPT. Which is basically the original version with few edits I got from Matthieu.
+
+Optional: if the result of SAM for sum partitions are very bad because the first frame is not good in that partition you can replace the first frame by another custom frame using B0_PreProcess_forSAM/AddFr_toVideo.ipynb notebook
+
+Collect the masks:After getting the results of SAM for each partition in .png formats. Collect the mask for all partitions in a single directory using the script: B1_ConvertSAM2DLC/0-CollectMasks.ipynb
+
+Skeletonize the segmentation masks: then use the directory that has masks for all frames in 1-B1_ConvertSAM2DLC/ConvertToSkleton/skletonize.ipynb script to skeletonize the binary mask into 200 point coordinates.
+
+Convert skleton to DLC format: Use B1_ConvertSAM2DLC/2-ImportMasksToDLC_0319.ipynb script
+Manually correct masks in DLC.
+
+
+
+Alignments:
+Correcting Joystick movements:
+Use first the script:
+BCf-AlignUpperCamera_Confocal_Joystick/0-AlignUppeCamera_Joystick_diffDelays.ipynb
+And then use the results obtained from this script in :
+BCf-AlignUpperCamera_Confocal_Joystick/1-AlignUppeCamera_Joystick.ipynb
+Both scripts have descriptions explaining how to use them for alignments.
+The results of the second script go into '/Data/All_Data/All_point_coord/'
+
+AlignUpperandLowerCamera.ipynb
+There are descriptions in the script. The outputs of this script goes to /Data/All_Data/All_correspondence/
+
+Unifying all worms:
+
+
+
+
