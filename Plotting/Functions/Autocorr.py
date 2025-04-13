@@ -114,13 +114,13 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
     num_neu = MegaData.shape[2]
     FullAutocorr = np.zeros((numW,2*ML-1,num_neu))
     FullLags = np.zeros((numW,2*ML-1,num_neu))
-    Time_constant = np.zeros((numW,num_neu,2))#0time,1scale
-    exp1_decay = np.zeros((numW,num_neu))#0time,1scale
-    double_exponential = np.zeros((numW,num_neu,4))#0time,1scale
-    stretched_exponential = np.zeros((numW,num_neu,3))#
-    power_law = np.zeros((numW,num_neu,3))#
-    gaussian = np.zeros((numW,num_neu,2))#
-    threshold_t = np.zeros((numW,num_neu))
+    Time_constant = np.full((numW,num_neu,2),np.nan)#0time,1scale
+    exp1_decay = np.full((numW,num_neu),np.nan)#0time,1scale
+    double_exponential = np.full((numW,num_neu,4),np.nan)#0time,1scale
+    stretched_exponential = np.full((numW,num_neu,3),np.nan)#
+    power_law = np.full((numW,num_neu,3),np.nan)#
+    gaussian = np.full((numW,num_neu,2),np.nan)#
+    threshold_t = np.full((numW,num_neu),np.nan)
 
     for d in range(numW):
         for n in range(num_neu):
@@ -140,6 +140,8 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
                     valid0= np.nonzero(~np.isnan(autocorrnan2[len(x)-1:]))[0]
                     valid = [i for i in valid0 if TimeMat[d,i] < thresh]
                     valid = np.array(valid)
+                else:
+                    valid0=valid
 
                 # Fit the exponential model to the autocorrelation
 
@@ -149,13 +151,13 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
                 popt2, pcov = curve_fit(exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 20])  # Initial guess for A and tau_0
                 Time_constant[d,n,1], Time_constant[d,n,0] = popt2
 
-                threshold_t[d,n] = fall_below_thresh(time[valid], autocorrnan2[len(x)-1+valid],threshold = 1 / np.e)
+                threshold_t[d,n] = fall_below_thresh(time[valid0], autocorrnan2[len(x)-1+valid0],threshold = 1 / np.e)
 
                 popt_gauss, pcov5 = curve_fit(gaussian_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 20])
                 gaussian[d,n,1], gaussian[d,n,0] = popt_gauss
 
-                #popt_double, pcov2 = curve_fit(double_exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 1, 1, 1])
-                #double_exponential[d,n,2],double_exponential[d,n,0],double_exponential[d,n,3],double_exponential[d,n,1]= popt_double
+                popt_double, pcov2 = curve_fit(double_exponential_decay, time[valid], autocorrnan2[len(x)-1+valid], p0=[1, 20, 1, 1],maxfev=5000)
+                double_exponential[d,n,2],double_exponential[d,n,0],double_exponential[d,n,3],double_exponential[d,n,1]= popt_double
 
                 if allfit:
                     popt_stretch, pcov3 = curve_fit(stretched_exponential_decay, time[valid],
@@ -169,9 +171,9 @@ def get_time_scale(MegaData,L,TimeMat, allfit=False,thresh=1500,neurite=False):
 
 
     if allfit:
-        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,stretched_exponential,power_law,threshold_t
+        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,stretched_exponential,power_law,threshold_t,double_exponential
     else:
-        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,threshold_t
+        return FullLags,FullAutocorr,Time_constant,exp1_decay,gaussian,threshold_t,double_exponential
 
 def get_all_cross(MegaData,m,L,TimeMat,thresh=1500,neurite=False):
     'm: the neuron whose cross correlation you want to compute with others'
@@ -181,14 +183,7 @@ def get_all_cross(MegaData,m,L,TimeMat,thresh=1500,neurite=False):
     num_neu = MegaData.shape[2]
     FullAutocorr = np.zeros((numW,2*ML-1,num_neu))
     FullLags = np.zeros((numW,2*ML-1,num_neu))
-    Time_constant = np.zeros((numW,num_neu,2))#0time,1scale
-    exp1_decay = np.zeros((numW,num_neu))#0time,1scale
-    double_exponential = np.zeros((numW,num_neu,4))#0time,1scale
-    stretched_exponential = np.zeros((numW,num_neu,3))#
-    power_law = np.zeros((numW,num_neu,3))#
-    gaussian = np.zeros((numW,num_neu,2))#
-    top_peak3 = np.zeros((numW,num_neu,8))
-    top_peak3[top_peak3==0] = np.nan
+    top_peak3 = np.full((numW,num_neu,8),np.nan)
     for d in range(numW):
         y= copy.deepcopy(MegaData[d,:L[d],m])
         y[y==0]= np.nan
@@ -336,12 +331,13 @@ def plot_parameters_errbar(data,Neur_lab, paramName='τ Value',fs = 16):
     row_means = np.nanmean(data, axis=0)  # Mean across columns, ignoring NaNs
     row_sems = np.nanstd(data, axis=0) / np.sqrt(np.sum(~np.isnan(data), axis=0))
     rows = np.arange(data.shape[1])  # Row indices for the x-axis
-    plt.figure(figsize=(8, 4))
+    fig = plt.figure(figsize=(8, 4))
     plt.errorbar(rows, row_means, yerr=row_sems, fmt='o-', capsize=5, label='Mean ± SEM',lw=4)
     plt.xticks(rows,labels=Neur_lab,fontsize=fs)  # Set custom x labels with font size
     plt.yticks(fontsize=fs)
     plt.title(paramName, fontsize=fs)
     plt.grid(True)
+    return fig
 
 def plot_parameters_errbar2(data1,data2,Neur_lab, paramName='τ Value',fs = 16):
     row_means1 = np.nanmean(data1, axis=0)  # Mean across rows, ignoring NaNs
@@ -360,7 +356,7 @@ def plot_parameters_errbar2(data1,data2,Neur_lab, paramName='τ Value',fs = 16):
     plt.grid(True)
     return fig
 
-def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0,median=0):
+def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0,median=0,dots=0):
     """
     Plot bar plots with error bars for the given data.
 
@@ -379,6 +375,13 @@ def plot_parameters_bar(data, Neur_lab, paramName='τ Value', fs=16,r=0,median=0
 
     fig = plt.figure(figsize=(8, 6))
     plt.bar(rows, row_means, yerr=row_sems, capsize=5, alpha=0.8, color='skyblue', edgecolor='black')
+    # Overlay individual data points as scatter dots
+    if dots:
+        for i in range(data.shape[1]):  # Loop over each category
+            y_values = data[:, i]  # Get values for each category
+            x_values = np.full_like(y_values, fill_value=rows[i], dtype=np.float64)  # X position for each dot
+            x_values += np.random.uniform(-0.1, 0.1, size=len(y_values))  # Add jitter for better visibility
+            plt.scatter(x_values, y_values, color='green', alpha=0.6, s=30)  # Plot data points
     plt.xticks(rows, labels=Neur_lab, fontsize=fs,rotation=r)
     plt.yticks(fontsize=fs)
     plt.ylabel(paramName, fontsize=fs)
@@ -424,7 +427,7 @@ def plot_parameters_violin(data, Neur_lab, paramName='τ Value', fs=16,r=0):
         paramName: Label for the y-axis.
         fs: Font size for labels and ticks.
     """
-    fig = plt.figure(figsize=(data.shape[1], 4))
+    fig = plt.figure(figsize=(data.shape[1]+4, 4))
     sns.violinplot(data=data, inner='point')  # Add points to show mean/median within the distribution
     plt.xticks(np.arange(data.shape[1]), labels=Neur_lab, fontsize=fs,rotation=r)
     plt.yticks(fontsize=fs)
@@ -438,8 +441,8 @@ def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0,limi
     #exp: 0 if  A*exp(t/t0) is fitted and 1 if exp(t/t0) is fitted
     numW = FullLags.shape[0]
     num_n = FullLags.shape[2]
-    fig, axes = plt.subplots(numW, num_n, figsize=(20, 10), sharex=True, sharey=True)
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    fig, axes = plt.subplots(numW, num_n, figsize=(num_n*2+6, 10), sharex=True, sharey=True)
+    fig.subplots_adjust(hspace=0.1, wspace=0.15)
     # Loop over all combinations of n and d
     for n in range(num_n):
         for d in range(numW):
@@ -450,7 +453,7 @@ def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0,limi
             autocorr = FullAutocorr[d, L[d]-1:2*L[d]-1, n]
             ax.scatter(temp, autocorr, label="Data", color="blue", alpha=0.6)
             hl=1/np.e
-            ax.axhline(y= hl, color='green', linestyle='--')
+            ax.axhline(y= hl, color='green', linestyle='--',lw=4)
             if exp==0:
                 popt2 = Time_constant[d, n, 1], Time_constant[d, n, 0]
                 ax.plot(temp, exponential_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
@@ -461,27 +464,32 @@ def plot_AllneuronsFit(FullLags,FullAutocorr,Neur_lab,Time_constant,L,exp=0,limi
                 tau_value = Time_constant[d, n]
 
             # Add titles and grid
-            ax.set_title(Neur_lab[n]+f", W={d}", fontsize=15)
             ax.grid(alpha=0.5)
             ax.set_ylim(-0.2, 1.1)
-            ax.set_xlim(-0.2,limit)
-
-            ax.text(0.3, 0.7, f"τ={tau_value:.2f}", transform=ax.transAxes, fontsize=10, color="black")
+            ax.set_xlim(-2,limit)
+            if ~np.isnan(tau_value) and tau_value < limit-30:
+                ax.text(0.3, 0.7, f"τ={tau_value:.2f}", transform=ax.transAxes, fontsize=15, color="black")
             # Remove ticks for better readability
             ax.tick_params(axis='both', which='major', labelsize=15)
+            if d==0:
+                ax.set_title(Neur_lab[n], fontsize=20)
+            if n==0:
+                label_obj=ax.set_ylabel(f"W{d}", fontsize=20,rotation=90)
 
+    label_obj.set_rotation(90)
     # Set shared labels
     fig.text(0.5, 0.04, 'Lag', ha='center', fontsize=20)
-    fig.text(0.04, 0.5, 'Autocorrelation', va='center', rotation='vertical', fontsize=20)
+    #fig.text(0.04, 0.5, 'Autocorrelation', va='center', rotation='vertical', fontsize=20)
 
     return fig
 
-def plot_AllneuronsFit_thresh(FullLags,FullAutocorr,Neur_lab,Time_constant,thresh,L,exp=0,limit=1000):
-    #exp: 0 if  A*exp(t/t0) is fitted and 1 if exp(t/t0) is fitted
+def plot_AllneuronsFit_thresh(FullLags,FullAutocorr,Neur_lab,Time_constant,thresh,L,exp=0,limit=1000,writeT=0,log=0):
+    #exp: 0 if  A*exp(t/t0) is fitted and 1 if exp(t/t0) is fitted,2 if double exp is fitted
     numW = FullLags.shape[0]
     num_n = FullLags.shape[2]
-    fig, axes = plt.subplots(numW, num_n, figsize=(20, 10), sharex=True, sharey=True)
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+
+    fig, axes = plt.subplots(numW, num_n, figsize=(num_n*2+6, 10), sharex=True, sharey=True)
+    fig.subplots_adjust(hspace=0.1, wspace=0.15)
     # Loop over all combinations of n and d
     for n in range(num_n):
         for d in range(numW):
@@ -490,30 +498,82 @@ def plot_AllneuronsFit_thresh(FullLags,FullAutocorr,Neur_lab,Time_constant,thres
             # Extract data for current n and d
             temp = FullLags[d, L[d]-1:2*L[d]-1, n]
             autocorr = FullAutocorr[d, L[d]-1:2*L[d]-1, n]
-            ax.scatter(temp, autocorr, label="Data", color="blue", alpha=0.6)
+            ax.scatter(temp, autocorr, label="Data", color="blue", alpha=0.6,s=60)
             hl=1/np.e
-            ax.axhline(y= hl, color='green', linestyle='--')
+
             if exp==0:
                 popt2 = Time_constant[d, n, 1], Time_constant[d, n, 0]
                 ax.plot(temp, exponential_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
-                tau_value = thresh[d, n, 0]
-            if exp==1:
+                tau_value = thresh[d, n]
+                if writeT:
+                    tau_value = Time_constant[d, n, 0]
+            elif exp==1:
                 popt2 = Time_constant[d, n],
                 ax.plot(temp, exponential1_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
                 tau_value = thresh[d, n]
+                if writeT:
+                    tau_value = Time_constant[d, n]
+            elif exp==2:
+                popt2 = Time_constant[d,n,2],Time_constant[d,n,0],Time_constant[d,n,3],Time_constant[d,n,1]
+                ax.plot(temp, double_exponential_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
+                tau_value = thresh[d, n]
+                if writeT:
+                    tau_value = Time_constant[d, n, 0]
 
-            # Add titles and grid
-            ax.set_title(Neur_lab[n]+f", W={d}", fontsize=15)
-            ax.grid(alpha=0.5)
+            elif exp==3:
+                popt2 = Time_constant[d,n,2],Time_constant[d,n,0],Time_constant[d,n,1]
+                ax.plot(temp, stretched_exponential_decay(temp, *popt2), label="Fit", color="red", alpha=0.8,lw=4)
+                tau_value = thresh[d, n]
+                if writeT:
+                    tau_value = Time_constant[d, n, 0]
+            else:
+                tau_value = thresh[d, n]
+            if log:
+                ax.set_xscale('log')
+                ax.set_xlim(1,limit)
+            else:
+                ax.set_xlim(-2,limit)
+            if ~np.isnan(tau_value):
+                ax.axhline(y= hl, color='green', linestyle='--',lw=4)
+                # Add titles and grid
+                axes[0, n].set_title(Neur_lab[n], fontsize=20)
+                axes[d, 0].set_ylabel(f"W{d}", fontsize=20)
+                ax.grid(alpha=0.7)
             ax.set_ylim(-0.2, 1.1)
-            ax.set_xlim(-0.2,limit)
 
-            ax.text(0.3, 0.7, f"τ={tau_value:.2f}", transform=ax.transAxes, fontsize=10, color="black")
+            if ~np.isnan(tau_value) and tau_value < 1000:
+                ax.text(0.3, 0.7, f"τ={tau_value:.2f}", transform=ax.transAxes, fontsize=15, color="black")
             # Remove ticks for better readability
             ax.tick_params(axis='both', which='major', labelsize=15)
 
     # Set shared labels
     fig.text(0.5, 0.04, 'Lag', ha='center', fontsize=20)
-    fig.text(0.04, 0.5, 'Autocorrelation', va='center', rotation='vertical', fontsize=20)
+    #fig.text(0.04, 0.5, 'Autocorrelation', va='center', rotation='vertical', fontsize=20)
 
+    return fig,axes
+
+def add_to_plot_AllneuronsFit(fig, axes,FullLags,Time_constant,L,exp=0,log=0):
+    numW = axes.shape[0]
+    num_n = axes.shape[1]
+
+    for n in range(num_n):
+        for d in range(numW):
+            temp = FullLags[d, L[d]-1:2*L[d]-1, n]
+            ax = axes[d, n]
+            if exp==0:
+                popt2 = Time_constant[d, n, 1], Time_constant[d, n, 0]
+                ax.plot(temp, exponential_decay(temp, *popt2), label="Fit", color="lightgreen", alpha=0.8, lw=4)
+            if exp==1:
+                popt2 = Time_constant[d, n],
+                ax.plot(temp, exponential1_decay(temp, *popt2), label="Fit", color="lightgreen", alpha=0.8,lw=4)
+
+            if exp==2:
+                popt2 = Time_constant[d,n,2],Time_constant[d,n,0],Time_constant[d,n,3],Time_constant[d,n,1]
+                ax.plot(temp, double_exponential_decay(temp, *popt2), label="Fit", color="lightgreen", alpha=0.8, lw=4)
+
+            if exp==3:
+                popt2 = Time_constant[d,n,2],Time_constant[d,n,0],Time_constant[d,n,1]
+                ax.plot(temp, stretched_exponential_decay(temp, *popt2), label="Fit", color="lightgreen", alpha=0.8, lw=4)
+            if log:
+                ax.set_xscale('log')
     return fig
