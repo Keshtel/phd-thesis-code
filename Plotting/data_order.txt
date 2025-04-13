@@ -29,5 +29,26 @@ Dictionary = {listval[v]:listkeys[v] for v in range(len(listkeys)-1)}
 15 and 16 are speed and axial velocity computed with dt=1 second. 13 and 14, 17and18 : speed and velocity with longer and shorter dt respectively.
 medium  is the magnitude of the velocity (speed) and signed_medium  is the axial velocity (Axial velocity is the projection of velocity on the center vector of the worm thus it has a positive or negative sign.). wherever I mention speed in plots or thesis, it means the medium  variable and wherever I mention velocity, it is the axial velocity signed_medium.
 
+Notes on MegaData7_9worms.h5:
+every thing is similar as before except that Worm 7 is the RIM-only worm and different neurons in this worm are just different calculations of RIM activity.
+The indices corresponding to different activity computation is: 
+
+
+0:(average green channel intensity of mask):computed on mixed channel 
+1:(average green channel intensity of mask)/(average red channel intensity of mask): computed on mixed channel 
+2:(top 30% green channel intensity of mask)/(top 30% red channel intensity of mask):computed on mixed channel 
+3:(top 30% green channel intensity of mask): separate channels
+4:(average green channel intensity of mask): separate channels
+5:(top 30% green channel intensity of mask)/(top 30% red channel intensity of mask):separate channels
+6:(average green channel intensity of mask)/(average red channel intensity of mask):separate channels
+
+Worm 8 is the AVA-worm which has both AVA and AVB. It has 3 pairs of neurons and here all three pairs are in the same mask. 
+The order of activity is: 
+0:(average green channel intensity of mask)
+1:(average green channel intensity of mask)/(average red channel intensity of mask)
+2:(top 30% green channel intensity of mask)/(top 30% red channel intensity of mask)
+3:(top 30% green channel intensity of mask) 
+
+
       
       

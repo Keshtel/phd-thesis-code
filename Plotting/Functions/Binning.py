@@ -200,6 +200,7 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
     else:
         filtered_range = [i for i in range(dataset_num) if i not in except_data]
     corr_neuronsRI_ind_Vel1 = np.zeros((dataset_num,max_neurons))
+    corr_neuronsRI_ind_Vel_long = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_Vel2 = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_curv = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_acc = np.zeros((dataset_num,max_neurons))
@@ -207,6 +208,7 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
     corr_neuronsRI_ind_theta = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_turn = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_speed = np.zeros((dataset_num,max_neurons))
+    corr_neuronsRI_ind_speed_long = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_Back = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_Forward = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_BackFreq = np.zeros((dataset_num,max_neurons))
@@ -220,12 +222,14 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
     activity_bins = np.zeros((dataset_num,max_neurons,np.max(b)))
     forward_bins = np.zeros((dataset_num,np.max(b)))
     Velocity_bin = np.zeros((dataset_num,np.max(b)))
+    Velocity_bin_long = np.zeros((dataset_num,np.max(b)))
     backward_bins = np.zeros((dataset_num,np.max(b)))
     backwardFreq_bins = np.zeros((dataset_num,np.max(b)))
     forwardFreq_bins = np.zeros((dataset_num,np.max(b)))
 
     odor_bins = np.zeros((dataset_num,np.max(b)))
     speed_bins = np.zeros((dataset_num,np.max(b)))
+    speed_bins_long = np.zeros((dataset_num,np.max(b)))
     acceleration_bins = np.zeros((dataset_num,np.max(b)))
     head_bins = np.zeros((dataset_num,np.max(b)))
     headAngle_bins = np.zeros((dataset_num,np.max(b)))
@@ -264,6 +268,7 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
         dfC,mean_time_by_bin, mean_curve_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],26],bins=b[d])#average head curvature
         dfA,mean_time_by_bin, mean_acc_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],48],bins=b[d])#average acceleration
         dfVcen,mean_time_by_bin, mean_VcenSigned_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],42],bins=b[d])#mean velocity
+        dfVcen,mean_time_by_bin, Velocity_bin_long[d,:b[d]],width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],43],bins=b[d])
         nonz_head = np.nonzero(~np.isnan(MegaData[d,:L[d],25]))
         dfTh,mean_time_by_bin, mean_headV_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],25],bins=b[d])#head velocity
         #dfTh,mean_time_by_bin, mean_headV_by_bin,width = bin_and_plot(MegaData[d,nonz_head[0],12],MegaData[d,nonz_head[0],25],bins=b[d])#head velocity
@@ -278,6 +283,7 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
         nonz_speed = np.nonzero(~np.isnan(MegaData[d,:L[d],15]))
         #dfsp,mean_time_by_bin, speed_bins[d,:b[d]],width = bin_and_plot(MegaData[d,nonz_speed[0],12],MegaData[d,nonz_speed[0],15],bins=b[d])#speed value
         dfsp,mean_time_by_bin, speed_bins[d,:b[d]],width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],15],bins=b[d])#speed value
+        dfsp,mean_time_by_bin, speed_bins_long[d,:b[d]],width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],13],bins=b[d])# long speed value
         odor_bins[d,:b[d]] = mean_odor_by_bin
 
         theta_bins[d,:b[d]] = mean_theta_by_bin
@@ -316,7 +322,9 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
         BackwVelocity_bin[d,:b[d]] = mean_VcenSigned_by_bin
         for n0 in range(len(neurons)):
             corr_neuronsRI_ind_Vel1[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], Velocity_bin[d,:b[d]])
+            corr_neuronsRI_ind_Vel_long[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], Velocity_bin_long[d,:b[d]])
             corr_neuronsRI_ind_speed[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], speed_bins[d,:b[d]])
+            corr_neuronsRI_ind_speed[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], speed_bins_long[d,:b[d]])
             corr_neuronsRI_ind_theta[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], theta_bins[d,:b[d]])
             corr_neuronsRI_ind_turn[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], turn_bins[d,:b[d]])
             corr_neuronsRI_ind_acc[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], acceleration_bins[d,:b[d]])
@@ -335,10 +343,12 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
                 'ForwardFreq':forwardFreq_bins,
                 'BackwardFreq':backwardFreq_bins,
                 'Speed': speed_bins,
+                'Speed_long': speed_bins_long,
                 'Theta': theta_bins,
                 'Turn': turn_bins,
                 'Curve': curve_bins,
                 'Velocity': Velocity_bin,
+                'Velocity_long': Velocity_bin_long,
                 'Odor':odor_bins,
                 'Acceleration': acceleration_bins,
                 'time': time_bins,
@@ -354,7 +364,9 @@ def Compute_bins(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,turn_ve
             }
     results_correlation = {
                             'Vel1':corr_neuronsRI_ind_Vel1,
+                            'Vel_long':corr_neuronsRI_ind_Vel_long,
                             'speed':corr_neuronsRI_ind_speed,
+                            'speed_long':corr_neuronsRI_ind_speed,
                             'theta':corr_neuronsRI_ind_theta,
                             'turn':corr_neuronsRI_ind_turn,
                             'acc':corr_neuronsRI_ind_acc,
@@ -377,6 +389,7 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
     else:
         filtered_range = [i for i in range(dataset_num) if i not in except_data]
     corr_neuronsRI_ind_Vel1 = np.zeros((dataset_num,max_neurons))
+    corr_neuronsRI_ind_Vel_long = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_Vel2 = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_curv = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_acc = np.zeros((dataset_num,max_neurons))
@@ -384,6 +397,7 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
     corr_neuronsRI_ind_theta = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_turn = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_speed = np.zeros((dataset_num,max_neurons))
+    corr_neuronsRI_ind_speed_long = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_Back = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_Forward = np.zeros((dataset_num,max_neurons))
     corr_neuronsRI_ind_BackFreq = np.zeros((dataset_num,max_neurons))
@@ -397,12 +411,14 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
     activity_bins = np.zeros((dataset_num,max_neurons,np.max(b)))
     forward_bins = np.zeros((dataset_num,np.max(b)))
     Velocity_bin = np.zeros((dataset_num,np.max(b)))
+    Velocity_bin_long = np.zeros((dataset_num,np.max(b)))
     backward_bins = np.zeros((dataset_num,np.max(b)))
     backwardFreq_bins = np.zeros((dataset_num,np.max(b)))
     forwardFreq_bins = np.zeros((dataset_num,np.max(b)))
 
     odor_bins = np.zeros((dataset_num,np.max(b)))
     speed_bins = np.zeros((dataset_num,np.max(b)))
+    speed_bins_long = np.zeros((dataset_num,np.max(b)))
     acceleration_bins = np.zeros((dataset_num,np.max(b)))
     head_bins = np.zeros((dataset_num,np.max(b)))
     headAngle_bins = np.zeros((dataset_num,np.max(b)))
@@ -441,6 +457,7 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
         dfC,mean_time_by_bin, mean_curve_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],26],bins=b[d])#average head curvature
         dfA,mean_time_by_bin, mean_acc_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],48],bins=b[d])#average acceleration
         dfVcen,mean_time_by_bin, mean_VcenSigned_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],42],bins=b[d])#mean velocity
+        dfVcen,mean_time_by_bin, Velocity_bin_long[d,:b[d]],width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],43],bins=b[d])
         nonz_head = np.nonzero(~np.isnan(MegaData[d,:L[d],25]))
         #dfTh,mean_time_by_bin, mean_headV_by_bin,width = bin_and_plot(MegaData[d,nonz_head[0],12],MegaData[d,nonz_head[0],25],bins=b[d])#head velocity
         dfTh,mean_time_by_bin, mean_headV_by_bin,width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],25],bins=b[d])#head velocity
@@ -455,6 +472,7 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
         nonz_speed = np.nonzero(~np.isnan(MegaData[d,:L[d],15]))
         #dfsp,mean_time_by_bin, speed_bins[d,:b[d]],width = bin_and_plot(MegaData[d,nonz_speed[0],12],MegaData[d,nonz_speed[0],15],bins=b[d])#speed value
         dfsp,mean_time_by_bin, speed_bins[d,:b[d]],width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],15],bins=b[d])#speed value
+        dfsp,mean_time_by_bin, speed_bins_long[d,:b[d]],width = bin_and_plot(MegaData[d,:L[d],12],MegaData[d,:L[d],13],bins=b[d])#speed value
         odor_bins[d,:b[d]] = mean_odor_by_bin
 
         theta_bins[d,:b[d]] = mean_theta_by_bin
@@ -497,6 +515,8 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
         for n0 in range(len(neurons)):
             corr_neuronsRI_ind_Vel1[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], Velocity_bin[d,:b[d]])
             corr_neuronsRI_ind_speed[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], speed_bins[d,:b[d]])
+            corr_neuronsRI_ind_Vel_long[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], Velocity_bin_long[d,:b[d]])
+            corr_neuronsRI_ind_speed_long[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], speed_bins_long[d,:b[d]])
             corr_neuronsRI_ind_theta[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], theta_bins[d,:b[d]])
             corr_neuronsRI_ind_turn[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], turn_bins[d,:b[d]])
             corr_neuronsRI_ind_acc[d,n0],x = compute_2rows(activity_bins[d,n0,:b[d]], acceleration_bins[d,:b[d]])
@@ -515,10 +535,12 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
                 'ForwardFreq':forwardFreq_bins,
                 'BackwardFreq':backwardFreq_bins,
                 'Speed': speed_bins,
+                'Speed_long': speed_bins_long,
                 'Theta': theta_bins,
                 'Turn': turn_bins,
                 'Curve': curve_bins,
                 'Velocity': Velocity_bin,
+                'Velocity_long': Velocity_bin_long,
                 'Odor':odor_bins,
                 'Acceleration': acceleration_bins,
                 'time': time_bins,
@@ -534,7 +556,9 @@ def Compute_binsWnans(MegaData,b,L,neurons,forward_vec,backward_vec,speed_vec,tu
             }
     results_correlation = {
                             'Vel1':corr_neuronsRI_ind_Vel1,
+                            'Vel_long':corr_neuronsRI_ind_Vel_long,
                             'speed':corr_neuronsRI_ind_speed,
+                            'speed_long':corr_neuronsRI_ind_speed_long,
                             'theta':corr_neuronsRI_ind_theta,
                             'turn':corr_neuronsRI_ind_turn,
                             'acc':corr_neuronsRI_ind_acc,
@@ -559,7 +583,7 @@ def smooth_vec(rowsArr_floatloc0,sig=2):
         for t in range(len(starts)):
             if end[t]-starts[t]>3:
                 smoothed_arr[starts[t]:end[t]] = gaussian_filter1d(rowsArr_floatloc1[starts[t]:end[t]], sigma=sig)
-        smoothed_arr_f = [np.float(x) for x in smoothed_arr]
+        smoothed_arr_f = [float(x) for x in smoothed_arr]
         return smoothed_arr_f
     else:
         return smoothed_arr

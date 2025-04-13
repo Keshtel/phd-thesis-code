@@ -27,7 +27,7 @@ from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 #from dtaidistance import dtw
 #from dtaidistance.dtw import constrained
-from pytwed import twed
+
 
 from sklearn import datasets
 from sklearn.tree import DecisionTreeClassifier
@@ -933,7 +933,21 @@ def plot_fewBars_wpoints(Rsqrt0,save=False,saveName = 'fewBars',
     plt.tight_layout()
     plt.show()
     return fig
+def plot_hist_all(data,xlab='Value',ylab='Frequency',titre= 'Histogram',b=20,fs=15):
+    flattened_data = data.flatten()
 
+    # Plot histogram
+    fig = plt.figure(figsize=(8, 6))
+    filtered_data = flattened_data[(flattened_data != 0) & (~np.isnan(flattened_data))]
+    plt.hist(filtered_data, bins=b, color='skyblue', edgecolor='black', alpha=0.7)
+    plt.xlabel(xlab,fontsize=fs+5)
+    plt.ylabel(ylab,fontsize=fs+5)
+    plt.xticks(fontsize=fs)  # Increase x-axis tick size
+    plt.yticks(fontsize=fs)
+    plt.title(titre,fontsize=fs+5)
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.show()
+    return fig
 def plot_histogram_subplots(MegaData0,L,columnToPlot,perc=10,start=[0,0,0,0,0,0,0,0],
                 ylab='Frequency',b=[20,20,20,20,20,20,20,20],
                 removeTopBottom=np.zeros((9,2))):

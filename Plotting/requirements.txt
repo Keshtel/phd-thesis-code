@@ -15,4 +15,8 @@ plotly==5.23.0
 scikit-learn 
 scipy 
 seaborn 
+statsmodels
+xgboost
+ipympl
+jupyter_contrib_nbextensions
 
